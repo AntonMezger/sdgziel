@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<formidable version="2.0.301" xmlns:datahandler="http://www.ameos.com/formidable/2.0.301/datahandler" xmlns:datasource="http://www.ameos.com/formidable/2.0.301/datasource" xmlns:renderer="http://www.ameos.com/formidable/2.0.301/renderer" xmlns:renderlet="http://www.ameos.com/formidable/2.0.301/renderlet" xmlns:validator="http://www.ameos.com/formidable/2.0.301/validator" xmlns:actionlet="http://www.ameos.com/formidable/2.0.301/actionlet">
+     //
+     // in class.mainrenderlet.php I had to change the function getValueForHtml while htmlspecialchars is causing a problem with double quotes when using utf-8 (4.4.2019)
+     // in class .tx_mkforms_widgets_listr_Main.php I had to introduce in  funcrion _renderList_displayRows code to replace double quote to two single quotes, while lister displays &quot;
+     //
+	<meta>
+		<name>Create Berater</name>
+		<form formid="myformid" />
+		<displaylabels>true</displaylabels>
+		<debug>false</debug>
+          <libs>scriptaculous</libs>          
+     </meta>
+	<control>
+          
+          <!-- ******************  data table ************************** -->
+		<datahandler:DB>
+			<tablename>mytable_berater</tablename>
+			<keyname>uid</keyname>
+			<process>
+                    
+                    <beforeinsertion>
+                         <userobj>
+                              <php><![CDATA[
+                                   //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($aData, "before insertion");
+                                   
+                                   $this->oSandBox->message = "";
+                                   $aData = $this->getParams();
+                                   $params = \TYPO3\CMS\Core\Utility\GeneralUtility::_GET();
+                                   $postId = $params['fiche'];
+                                   $currentEntryId = $this->oDataHandler->currentEntryId();
+                                   $uid = ($currentEntryId) ? $currentEntryId : $postId;
+                                   $aFormData = $this->oDataHandler->_getFormData();
+                                   $superuser="Superuser";
+                                   $super = false;
+                                  
+                                   // test if berater already in database
+                                   if(in_array($superuser, $GLOBALS['TSFE']->fe_user->groupData['title'])){
+                                        $super = true;
+                                        $where = "berater='" . $aFormData["berater"] ."'";  
+                                   } else {    
+                                        $where = "association='" . $GLOBALS["TSFE"]->fe_user->user["username"] ."'" . " and " .  "berater='" . $aFormData["berater"] ."'";                            
+                                   }	
+                                   $temp= $GLOBALS["TYPO3_DB"]->exec_SELECTgetRows("berater", "mytable_berater", $where, "", "berater ASC");
+                                   
+                                   // berater not found, then proceed -> possible insertion
+                                   if(count($temp) == 0) {
+                                        //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($aData, "nothing found");
+                                        // test if association exists
+                                        $where = "username='" . $aData["association"] ."'" ;
+                                        $temp= $GLOBALS["TYPO3_DB"]->exec_SELECTgetRows("username", "fe_users", $where, "", "username ASC");
+                                        
+                                        // assocation does not exist -> no insertion
+                                        if(count($temp) == 0) {
+                                             if($super) {
+                                                $this->oSandBox->message = "Datensatz kann nicht erstellt werden, weil Gesellschaft unbekannt ist";
+                                                $array=array(); 
+                                                return $array;
+                                             } else {
+                                             $aData["association"] = $GLOBALS["TSFE"]->fe_user->user["username"];
+                                                return $aData;
+                                             }  
+                                        }
+                                        // association exists -> insertion
+                                        return $aData;
+                                   
+                                   // berater exists, emit a message and return empty array in order to cancel the insertion
+                                   } else {
+                                        $this->oSandBox->message = "Datensatz kann nicht gändert werden, weil schon vorhanden";
+                                        $array=array(); 
+                                        return $array; 
+                                   }
+                              ]]></php>
+                         </userobj>
+                    </beforeinsertion>
+                    
+                    <!-- ******************  executed before creation of record ************************** -->
+                    <beforeCreation>
+                         <userobj>
+						<php><![CDATA[
+                                   $aData = $this->getParams();
+                                   //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($aData, "before creation");
+                                   // ici on remplacait l'association par l'utilisateur, pas une bonne idée
+                                   //$aData["association"] = $GLOBALS["TSFE"]->fe_user->user["username"];
+                                   return $aData;
+                              ]]></php>
+                         </userobj>
+                    </beforeCreation>
+                    
+                    <!-- ******************  executed after creation of record ************************** -->
+                    <afterCreation>
+                         <userobj>
+						<php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $html = languageMessage("create", true);
+                                   //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($html, "after creation");
+                                   $this->oSandBox->message = $html;
+                                   return $this->getParams();
+                              ]]></php>
+                         </userobj>
+                    </afterCreation>
+                    
+                    <!-- ******************  executed before edition of record ************************** -->
+                    <beforeEdition>
+                         <userobj>
+						<php><![CDATA[
+                                   $aData = $this->getParams();
+                                   //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($aData, "before edition");
+                                   return $aData;
+                              ]]></php>
+                         </userobj>
+                    </beforeEdition>
+                    
+                    <!-- ******************  executed after edition of record ************************** -->
+                    
+                    <afterEdition>
+                         <userobj>
+						<php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $html = languageMessage("modify", true);
+                                   //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($html, "after edition");
+                                   $this->oSandBox->message = $html;
+                                   return $this->getParams();
+                                   
+                              ]]>
+                              </php>
+                         </userobj>
+                    </afterEdition>
+               </process>
+          </datahandler:DB>
+          
+          <!-- ******************  definition of template and display first the username ************************** -->
+          
+          <renderer>
+               <type>TEMPLATE</type>
+               <formid>demoform</formid>
+               <template>
+                    <subpart>###FORM###</subpart>
+                    <path>fileadmin/xml/template/form_berater.html</path>
+                    <errortag>errors</errortag>
+               </template>
+          </renderer>
+          
+          <!-- ******************  the sandbox for keeping data ************************** -->
+          
+          <sandbox>
+               <userobj>
+                    <php><![CDATA[
+                         var $message = "";
+                         
+                         function init() {
+                              $params = \TYPO3\CMS\Core\Utility\GeneralUtility::_GET();
+                              $postId = $params['fiche'];
+                              $currentEntryId = $this->oForm->oDataHandler->currentEntryId();
+                              $fiche = ($currentEntryId) ? $currentEntryId : $postId;
+                              if (isset($fiche) && $fiche != "" && !$currentEntryId) {
+                                   $this->oForm->forceEntryId($fiche);
+                              }
+                         }
+                    ]]></php>
+               </userobj>
+          </sandbox>
+     </control>
+     
+     <!-- ******************  display elements ************************** -->
+     
+     <elements>
+          
+          <renderlet:BOX name="loggeduser">
+               <html>
+                    <userobj>
+                         <php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              return currentUser($GLOBALS['TSFE']->sys_language_uid);
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+          
+          <renderlet:LINK name="help" target="_blank" class="myhelp">
+                    <url>
+                         <userobj>
+                              <php> <![CDATA[ 
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        return currentHelpPDF($GLOBALS['TSFE']->sys_language_uid, "saisie_berater");
+                              ]]></php>
+                         </userobj>
+                    </url>
+               <label>
+                    <userobj>
+                         <php> <![CDATA[ 
+                              require_once ("fileadmin/php/myfunctions.php");
+                              return currentHelp($GLOBALS['TSFE']->sys_language_uid);
+                         ]]></php>
+                    </userobj>
+               </label>
+          </renderlet:LINK>
+          
+          <renderlet:BOX name="message">
+               <html>
+                    <userobj>
+                         <php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              $html = languageMessage("error", false);
+                              return  $html;
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+          
+          <renderlet:BOX name="confirm" >
+               <html>
+                    <userobj>
+                         <php> <![CDATA[ 
+                              //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($this->oSandBox->message, "confirm");
+                              $html = "";
+                              if ($this->oSandBox->message != "") {
+                                   //$html = '<script type="text/javascript"> alert(\'' . $this->oSandBox->message . " ');</script>";
+                                   $html = $this->oSandBox->message; 
+                                   //$html  = $html . '<script type="text/javascript">setTimeout(killMessage,5*1000); </script>';
+                                   $this->oSandBox->message = "";
+                              }
+                              return $html;
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+          
+          <renderlet:BOX name="showberater"  defaultWrap="false">
+               <html>
+                    <userobj>
+                         <php>
+                              <![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              $lang = languageSelected($GLOBALS['TSFE']->sys_language_uid);
+                              switch ($lang) {
+                                        case _en:
+                                             $html = "<span class='labelu'>Already existent persons : </span><br/>";
+                                             break;
+                                        case _de:
+                                             $html = "<span class='labelu'>Bereits erfasste Personen: </span><br/>";
+                                             break;
+                                        case _fr:
+                                             $html = "<span class='labelu'>Personnes déjà introduites : </span><br/>";
+                                             break;
+                                        case _it:
+                                             $html = "<span class='labelu'>Persona già introdotto : </span><br/>";
+                                             break;
+                                   }
+                              
+                                   $superuser="Superuser";
+                                   if(in_array($superuser, $GLOBALS['TSFE']->fe_user->groupData['title'])){
+                                        $where = "";  
+                                   } else {    
+                                        $where = "association='" . $GLOBALS["TSFE"]->fe_user->user["username"] ."'";                           
+                                   }	
+                                   $temp= $GLOBALS["TYPO3_DB"]->exec_SELECTgetRows("*", "mytable_berater", $where, "", "association, berater ASC");
+                                   
+                                   // get the berater column from the array
+                                   $column = array();
+                                   $column = "";
+                                   $column_name1= "berater";
+                                   $column_name2 = "association";
+                                   $prvAssociation = "empty";
+                                   foreach($temp as $array){
+                                        if(isset($array[$column_name1])){
+                                             if($array[$column_name2] != $prvAssociation) {
+                                               $pos = strrpos($column, ",");
+                                               $column[$pos] = " ";
+                                               $column = $column . "<span class='label'>[" . $array[$column_name2] . "]</span>";
+                                             }
+                                             $prvAssociation = $array[$column_name2];
+                                             $column =  $column . $array[$column_name1] . ", ";
+                                        }
+                                   }
+                                   $pos = strrpos($column, ",");
+                                   $column[$pos] = " ";
+                                   return  $html . $column;
+                              ]]>
+                         </php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+          
+          <!-- ******************  Berater ************************** -->
+          <renderlet:TEXT defaultWrap="false" name="berater"  class="tb4" activeListable="true">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.name.label</label>
+               <data>
+                    <defaultvalue>
+                         <userobj>
+						<php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $uid = getUID(\TYPO3\CMS\Core\Utility\GeneralUtility::_GET(), $this);
+                                   $data = getBeraterData($uid);
+                                   return $data["berater"];
+                              ]]></php>
+                         </userobj>
+                    </defaultvalue>
+               </data>
+               <validator:STANDARD>
+                    <required >
+                         <message>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.name.errors.required</message>
+                    </required>
+               </validator:STANDARD>
+          </renderlet:TEXT>
+          
+          <renderlet:TEXT defaultWrap="false" name="association"  class="tb2" activeListable="true">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.association.label</label>
+               <data>
+                    <defaultvalue>
+                         <userobj>
+						<php><![CDATA[
+                                   $superuser="Superuser";
+                                   if(in_array($superuser, $GLOBALS['TSFE']->fe_user->groupData['title'])){
+                                        return "";  
+                                   } else {    
+                                        return $GLOBALS["TSFE"]->fe_user->user["username"]; 
+                                   }	
+                              ]]></php>
+                         </userobj>
+                    </defaultvalue>
+                    <userobj>
+                              <php><![CDATA[
+                                   $aData = $this->getParams();
+                                   return $aData;
+                              ]]></php>
+                    </userobj>
+               </data>
+               
+               <process>
+                    <userobj>
+                         <php><![CDATA[
+                              $superuser="Superuser";
+                              if(in_array($superuser, $GLOBALS['TSFE']->fe_user->groupData['title'])){
+                                   return TRUE;
+                              } else {
+                                   return FALSE;
+                              }
+                         ]]></php>
+                    </userobj>     
+               </process>
+               
+               <validator:STANDARD>
+                    <required >
+                         <message>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.association.errors.required</message>
+                    </required>
+               </validator:STANDARD>
+          </renderlet:TEXT>
+          
+          <!-- ******************  id ************************** -->
+          <renderlet:TEXT name="uid"   readOnly="true" >
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.uid.label</label>
+               <data>
+                    <defaultvalue>
+                         <userobj>
+                              <php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $uid = getUID(\TYPO3\CMS\Core\Utility\GeneralUtility::_GET(), $this);
+                                   return $uid;
+                              ]]></php>
+                         </userobj>
+                    </defaultvalue>
+               </data>
+          </renderlet:TEXT>
+          
+          <!-- ******************  submit ************************** -->
+          <renderlet:SUBMIT name="button_submit" class="submit">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.fieldsubmit.label</label>
+          </renderlet:SUBMIT>
+          
+          <renderlet:LINK name="button_newrecord">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.suivant.label</label>
+               <url>
+                    <userobj>
+                         <php><![CDATA[
+                              return "index.php?id=78&L=".$GLOBALS['TSFE']->sys_language_uid;
+                         ]]></php>
+                    </userobj>
+               </url>
+          </renderlet:LINK>
+          
+          <!-- ******************  aller à la liste ************************** -->
+          <renderlet:LINK name ="annuler">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.return.label</label>
+               <url>
+                    <userobj>
+                         <php><![CDATA[ 
+                              return "index.php?id=79&L=".$GLOBALS['TSFE']->sys_language_uid;
+                         ]]></php>
+                    </userobj>
+               </url>
+          </renderlet:LINK>
+          
+     </elements>
+</formidable>

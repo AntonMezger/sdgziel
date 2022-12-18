@@ -1,0 +1,606 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<formidable>
+     //
+     // in class.mainrenderlet.php I had to change the function getValueForHtml while htmlspecialchars is causing a problem with double quotes when using utf-8 (4.4.2019)
+     // in class .tx_mkforms_widgets_listr_Main.php I had to introduce in  funcrion _renderList_displayRows code to replace double quote to two single quotes, while lister displays &quot;
+     // in class .tx_mkforms_action_FormBase.php modified routine getPrefillUid() in order to use also get parameters
+     //
+     <meta>
+          <name>searchform</name>
+          <form formid="searchform"/>
+          <debug>false</debug>
+          <displaylabels>true</displaylabels>
+          <libs>scriptaculous</libs>
+          <codebehind name="cb" path="fileadmin/xml/cb/class.exportxls.php"/>
+          <codebehind name="cb1" path="fileadmin/xml/cb/class.userfunctions.php"/>
+          
+          <onCheckPoint when="before-render" >
+               <userobj>
+                    <php><![CDATA[
+                         $this->oSandBox->sYear = date("Y");
+                    ]]></php>
+               </userobj>
+          </onCheckPoint> 
+     </meta>
+     
+     <control>
+     <renderer>
+		<type>TEMPLATE</type>
+          <template path="fileadmin/xml/template/form_search.html" subpart="###myform###"/>
+     </renderer>
+          
+          <datasources>
+               <datasource:DB name="mytable">
+                    <sql>
+                         <userobj>
+                              <php><![CDATA[
+                                   $superuser="Superuser";
+                                   if(in_array($superuser, $GLOBALS['TSFE']->fe_user->groupData['title'])) {
+                                        $sSql =  'SELECT * FROM mytable';
+                                   } else {                               
+                                        $sSql = 'SELECT * FROM mytable  WHERE association = ' ."'" . $GLOBALS["TSFE"]->fe_user->user["username"] ."'";
+                                   }   
+                                   
+                                   if(isset($this->oSandBox->sYear) && strlen($this->oSandBox->sYear) > 1) {
+                                        $sSql .= " AND year= " .  trim($this->oSandBox->sYear);
+                                   }
+                                   if(isset($this->oSandBox->sPatient) && strlen($this->oSandBox->sPatient)> 1) {
+                                        $Patient = str_replace("'","''", $this->oSandBox->sPatient);
+                                        $sSql .= " AND patient= " . "'" . trim($Patient) . "'" ;
+                                   }
+                                   if(isset($this->oSandBox->sAssociation) && strlen($this->oSandBox->sAssociation)> 1) {
+                                        $sSql .= " AND association= " . "'" . trim($this->oSandBox->sAssociation) . "'" ;
+                                   }
+                                   if(isset($this->oSandBox->sBerater) && strlen($this->oSandBox->sBerater)> 1) {
+                                        $sSql .= " AND berater= " . "'" . trim($this->oSandBox->sBerater) . "'" ;
+                                   }
+                                   if(isset($this->oSandBox->sDatefrom) && strlen($this->oSandBox->sDatefrom)> 1) {
+                                        $datefrom = trim($this->oSandBox->sDatefrom);
+                                        $sSql = $sSql . " AND beratungsdatum>{$datefrom}";
+                                   }
+                                   if(isset($this->oSandBox->sDateto) && strlen($this->oSandBox->sDateto)> 1) {
+                                        $dateto = trim($this->oSandBox->sDateto);
+                                        $sSql = $sSql . " AND beratungsdatum<{$dateto}";
+                                   }
+                                   if(isset($this->oSandBox->sUID) && strlen($this->oSandBox->sUID)> 1) {
+                                        $sSql .= " AND uid= " . "'" . trim($this->oSandBox->sUID) . "'" ;
+                                   }
+                                   
+                                   $from = '/' . preg_quote("WHERE AND", '/') . '/';
+                                   $to   = " WHERE ";
+                                   $sSql = preg_replace($from, $to, $sSql, 1);
+                                   $from = '/' . preg_quote("mytable AND", '/') . '/';
+                                   $to   = "mytable WHERE ";
+                                   $sSql = preg_replace($from, $to, $sSql, 1);
+                                   //echo  $sSql;
+                                   return $sSql;
+                              ]]></php>
+                         </userobj>
+                    </sql>
+               </datasource:DB>
+          </datasources>
+          
+          <sandbox>
+               <userobj>
+                    <php><![CDATA[
+                         var $sYear = " ";
+                         var $sPatient = " ";
+                         var $sAssociation = " ";
+                         var $sBerater = " ";
+                         var $sDatefrom = " ";
+                         var $sDateto = " ";
+                         var $sUID = " ";
+                    ]]></php>
+               </userobj>
+          </sandbox>
+          
+     </control>
+     
+     <elements>
+          <renderlet:MODALBOX name="mymodal">
+               <childs>
+                    <renderlet:BOX name="mybox"/>
+                    <renderlet:BUTTON name="closeBox" label="Close">
+                         <onclick runat="client">
+                              <userobj>
+                                   <php><![CDATA[
+                                        return $this->aORenderlets["mymodal"]->majixCloseBox();
+                                   ]]></php>
+                              </userobj>
+                         </onclick>
+                    </renderlet:BUTTON>
+               </childs>
+          </renderlet:MODALBOX>
+          
+          <renderlet:BOX name="loggeduser" class="labelu">
+               <html>
+                    <userobj>
+                         <php><![CDATA[
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        return currentUser($GLOBALS['TSFE']->sys_language_uid);
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+                              
+          <renderlet:LINK name="help" target="_blank" class="myhelp">
+                         <url>
+                              <userobj>
+                                   <php> <![CDATA[ 
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        return currentHelpPDF($GLOBALS['TSFE']->sys_language_uid, "listeredit_patient");
+                                   ]]></php>
+                              </userobj>
+                         </url>
+                         <label>
+                              <userobj>
+                                   <php> <![CDATA[ 
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        return currentHelp($GLOBALS['TSFE']->sys_language_uid);
+                                   ]]></php>
+                              </userobj>
+                         </label>
+          </renderlet:LINK>
+                    
+          <renderlet:BOX name="boxMessage" mode="H3"/>
+          <renderlet:BOX name="errorMessage"/>
+          
+          <renderlet:SEARCHFORM name="mysearch">
+               <datasource use="mytable"/>
+               <childs>
+                    <template path="fileadmin/xml/template/form_search.html" subpart="###mysearch###"/>
+                    
+                    <renderlet:BOX name="filter">
+                         <html>
+                              <userobj>
+                                   <php><![CDATA[
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        return currentFilter($GLOBALS['TSFE']->sys_language_uid);
+                                   ]]></php>
+                              </userobj>
+                         </html>
+                    </renderlet:BOX>
+                    
+                    <renderlet:LISTBOX name="year" class="tb2">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.year.label</label>
+                         <onchange runat="ajax" syncValue="true" cache="false">
+                              <userobj>
+                                   <php><![CDATA[
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        $this->oSandBox->sYear = $this->rdt("year")->getValue();
+                                        
+                                        $this->oSandBox->sBerater = "";
+                                        $this->oSandBox->sPatient = "";
+                                        
+                                        $year = $this->oSandBox->sYear;
+                                        $berater = $this->oSandBox->sBerater;
+                                        $association = $this->oSandBox->sAssociation;
+                                        $patient = $this->oSandBox->sPatient;
+                                        
+                                        $aData = getPatientDataUID($year, $berater, $association, $patient);
+                                        $bData = getPatientDataBerater($year, $berater, $association, $patient);
+                                        $cData = getPatientDataPatient($year, $berater, $association, $patient);
+                                        
+                                        return array(
+                                           $this->rdt("uid")->majixReplaceData($aData), 
+                                           $this->rdt("berater")->majixReplaceData($bData), 
+                                           $this->rdt("patient")->majixReplaceData($cData),
+                                           $this->rdt("berater")->majixClearValue(),
+                                           $this->rdt("patient")->majixSetValue(""),
+                                           $this->rdt("uid")->majixClearValue(),
+                                        );
+                                   ]]></php>
+                              </userobj>
+                         </onchange>
+                         <data>
+                              <defaultvalue>
+                                   <userobj>
+                                        <php><![CDATA[
+                                             return date("Y");
+                                        ]]></php>
+                                   </userobj>
+                         </defaultvalue>
+                              <items>
+                                   <item caption="" value=""/>
+                                   <item caption="2007" value="2007"/>
+                                   <item caption="2008" value="2008"/>
+                                   <item caption="2009" value="2009"/>
+                                   <item caption="2010" value="2010"/>
+                                   <item caption="2011" value="2011"/>
+                                   <item caption="2012" value="2012"/>
+                                   <item caption="2013" value="2013"/>
+                                   <item caption="2014" value="2014"/>
+                                   <item caption="2015" value="2015"/>
+                                   <item caption="2016" value="2016"/>
+                                   <item caption="2017" value="2017"/>
+                                   <item caption="2018" value="2018"/>
+                                   <item caption="2019" value="2019"/>
+                                   <item caption="2020" value="2020"/>
+                                   <item caption="2021" value="2021"/>
+                                   <item caption="2022" value="2022"/>
+                                   <item caption="2023" value="2023"/>
+                                   <item caption="2024" value="2024"/>
+                                   <item caption="2025" value="2025"/>
+                              </items>
+                         </data>
+                    </renderlet:LISTBOX>
+                    
+                    <renderlet:LISTBOX name="uid" class="tb2">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.uid.label</label>
+                         <onchange runat="ajax" syncValue="true" cache="false">
+                              <userobj>
+                                   <php><![CDATA[
+                                        $this->oSandBox->sUID = $this->rdt("uid")->getValue();
+                                   ]]></php>
+                              </userobj>
+                         </onchange>
+                         <data>
+                              <userobj>
+                                   <php><![CDATA[
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        $year = $this->oSandBox->sYear;
+                                        $berater = $this->oSandBox->sBerater;
+                                        $association = $this->oSandBox->sAssociation;
+                                        $patient = $this->oSandBox->sPatient;
+                                        $aData = getPatientDataUID($year, $berater, $association, $patient);
+                                        return $aData;
+                                   ]]></php>
+                              </userobj>
+                         </data>
+                    </renderlet:LISTBOX>
+                    
+                    <renderlet:LISTBOX name="association" class="tb2">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.association.label</label>
+                         <onchange runat="ajax" syncValue="true" cache="false">
+                              <userobj>
+                                   <php><![CDATA[
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        $this->oSandBox->sAssociation = $this->rdt("association")->getValue();
+                                        $this->oSandBox->sBerater = "";
+                                        $this->oSandBox->sPatient = "";
+                                        
+                                        $year = $this->oSandBox->sYear;
+                                        $berater = $this->oSandBox->sBerater;
+                                        $association = $this->oSandBox->sAssociation;
+                                        $patient = $this->oSandBox->sPatient;
+                                        
+                                        $aData = getPatientDataUID($year, $berater, $association, $patient);
+                                        $bData = getPatientDataBerater($year, $berater, $association, $patient);
+                                        $cData = getPatientDataPatient($year, $berater, $association, $patient);
+                                        
+                                        return array(
+                                           $this->rdt("uid")->majixReplaceData($aData), 
+                                           $this->rdt("berater")->majixReplaceData($bData), 
+                                           $this->rdt("patient")->majixReplaceData($cData),
+                                           $this->rdt("berater")->majixClearValue(),
+                                           $this->rdt("patient")->majixClearValue(),
+                                           $this->rdt("uid")->majixClearValue(),
+                                           $this->rdt("patient")->majixSetValue(""),
+                                        );
+                                   ]]></php>
+                              </userobj>
+                         </onchange>
+                         <data>
+                              <userobj>
+                                   <php><![CDATA[
+                                        $superuser="Superuser";
+                                        if(in_array($superuser, $GLOBALS['TSFE']->fe_user->groupData['title'])){
+                                             $where = "";  
+                                        } else {    
+                                             $where = "association='" . $GLOBALS["TSFE"]->fe_user->user["username"] ."'";                           
+                                        }   
+                                        $temp= $GLOBALS["TYPO3_DB"]->exec_SELECTgetRows("association as value, association as caption", "mytable", $where, "association",  "association ASC");
+                                        $extras[0] = array("value" => " ", "caption" => " ");                          // a blank field
+                                        return  array_merge($extras, $temp);
+                                   ]]></php>
+                              </userobj>
+                         </data>
+                    </renderlet:LISTBOX>
+                    
+                    <renderlet:LISTBOX name="berater" class="tb6">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.name.label</label>
+                         <onchange runat="ajax" syncValue="true" cache="false">
+                              <userobj>
+                                   <php><![CDATA[
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        $this->oSandBox->sBerater = $this->rdt("berater")->getValue();
+                                        $this->oSandBox->sPatient = "";
+                                        $year = $this->oSandBox->sYear;
+                                        
+                                        $berater = $this->oSandBox->sBerater;
+                                        $association = $this->oSandBox->sAssociation;
+                                        $patient = $this->oSandBox->sPatient;
+
+                                        $aData = getPatientDataUID($year, $berater, $association, $patient);
+                                        $cData = getPatientDataPatient($year, $berater, $association, $patient);
+                                        return array(
+                                           $this->rdt("uid")->majixReplaceData($aData), 
+                                           $this->rdt("patient")->majixReplaceData($cData),
+                                           $this->rdt("patient")->majixClearValue(),
+                                           $this->rdt("uid")->majixClearValue(),
+                                           $this->rdt("patient")->majixSetValue(""),
+                                        );
+                                   ]]></php>
+                              </userobj>
+                         </onchange>
+                         <data>
+                              <userobj>
+                                   <php><![CDATA[
+                                        $superuser="Superuser";
+                                        if(in_array($superuser, $GLOBALS['TSFE']->fe_user->groupData['title'])){
+                                             $where = "";  
+                                        } else {    
+                                             $where = "association='" . $GLOBALS["TSFE"]->fe_user->user["username"] ."'";                           
+                                        }   
+                                        $temp= $GLOBALS["TYPO3_DB"]->exec_SELECTgetRows("berater as value, berater as caption", "mytable", $where, "berater",  "berater ASC");
+                                        $extras[0] = array("value" => " ", "caption" => " ");                          // a blank field
+                                        return  array_merge($extras, $temp);
+                                   ]]></php>
+                              </userobj>
+                         </data>
+                    </renderlet:LISTBOX>
+                    
+                    <renderlet:LISTBOX name="patient" class="tb4">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.patient.label</label>
+                         <onchange runat="ajax" syncValue="true" cache="false">
+                              <userobj>
+                                   <php><![CDATA[
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        $this->oSandBox->sPatient = $this->rdt("patient")->getValue();
+                                        
+                                        $berater = $this->oSandBox->sBerater;
+                                        $association = $this->oSandBox->sAssociation;
+                                        $year = $this->oSandBox->sYear;
+                                        $patient = $this->oSandBox->sPatient;
+                                        $cData = getPatientDataUID($year, $berater, $association, $patient);
+                                        return array( 
+                                           $this->rdt("uid")->majixReplaceData($cData),
+                                        );
+                                   ]]></php>
+                              </userobj>
+                         </onchange>
+                         
+                         <data>
+                              <userobj>
+                                   <php><![CDATA[
+                                        $superuser="Superuser";
+                                        if(in_array($superuser, $GLOBALS['TSFE']->fe_user->groupData['title'])){
+                                             $where = " year=" . $this->oSandBox->sYear;  
+                                        } else {    
+                                             $where = "association='" . $GLOBALS["TSFE"]->fe_user->user["username"] ."' AND year=" . $this->oSandBox->sYear;                          
+                                        }   
+                                        $temp= $GLOBALS["TYPO3_DB"]->exec_SELECTgetRows("patient as value, patient as caption", "mytable", $where, "patient COLLATE utf8_bin",  "patient ASC");
+                                        $extras[0] = array("value" => " ", "caption" => " ");                          // a blank field
+                                        return  array_merge($extras, $temp);                                        
+                                   ]]></php>
+                              </userobj>
+                         </data>
+                    </renderlet:LISTBOX>
+                    
+                    <renderlet:DATE name="datefrom" class="tb2">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.datefrom.label</label>
+                         <data>
+                              <datetime format="%d-%m-%Y" locale="fr_FR"  allowmanualedition="true" displaytime="false" convertToTimestamp="true" />
+                         </data>
+                         <onchange runat="ajax" syncValue="true" cache="false">
+                              <userobj>
+                                   <php><![CDATA[
+                                        // here we are going to verify the correct format of the date value
+                                        $datefrom = trim($this->rdt("datefrom")->getValue());
+                                        $datetext = @date("d-m-Y", $datefrom);
+                                        if($datetext == TRUE) {
+                                             $datetime = \DateTime::createFromFormat('d-m-Y', $datetext);
+                                             if($datetime == TRUE) {
+                                                  $year = $datetime->format('Y');
+                                                  $annee = (int) $year;
+                                             }
+                                        }
+                                        
+                                        if($datetext == FALSE) {
+                                             return array($this->aORenderlets["errorMessage"]->majixReplaceData("<b><span style='color: red;'> Anfangsdatum nicht in Ordnung</span></b>"),);
+                                        } else if (($datetime == TRUE) && ($annee < 2000)) {
+                                             return array($this->aORenderlets["errorMessage"]->majixReplaceData("<b><span style='color: red;'> Anfangsdatum liegt zu viel in der Vergangenheit</span></b>"),);
+                                        } else if($datetime == TRUE) {
+                                             $this->oSandBox->sDatefrom = $this->rdt("datefrom")->getValue();
+                                             return array($this->aORenderlets["errorMessage"]->majixReplaceData("<b><span style='color: red;'> </span></b>"),);
+                                        }  else {
+                                             return array($this->aORenderlets["errorMessage"]->majixReplaceData("<b><span style='color: red;'> Anfangsdatum nicht in Ordnung</span></b>"),);
+                                        }
+                                   ]]></php>
+                              </userobj>
+                         </onchange>
+                    </renderlet:DATE>
+                    <renderlet:DATE name="dateto" class="tb2">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.dateto.label</label>
+                         <data>
+                              <datetime format="%d-%m-%Y" locale="fr_FR"  allowmanualedition="true" displaytime="false" convertToTimestamp="true" />
+                         </data>
+                         <onchange runat="ajax" syncValue="true" cache="false">
+                              <userobj>
+                                   <php><![CDATA[
+                                        // here we are going to verify the correct format of the date value
+                                        $dateto = trim($this->rdt("dateto")->getValue());
+                                        $datetext = @date("d-m-Y", $dateto);
+                                        if($datetext == TRUE) {
+                                             $datetime = \DateTime::createFromFormat('d-m-Y', $datetext);
+                                             if($datetime == TRUE) {
+                                                  $year = $datetime->format('Y');
+                                                  $annee = (int) $year;
+                                             }
+                                        }
+                                        
+                                        if($datetext == FALSE) {
+                                             return array($this->aORenderlets["errorMessage"]->majixReplaceData("<b><span style='color: red;'> Enddatum nicht in Ordnung</span></b>"),);
+                                        } else if (($datetime == TRUE) && ($annee < 2000)) {
+                                             return array($this->aORenderlets["errorMessage"]->majixReplaceData("<b><span style='color: red;'> Enddatum liegt zu viel in der Vergangenheit</span></b>"),);
+                                        } else if($datetime == TRUE) {
+                                             $this->oSandBox->sDateto = $this->rdt("dateto")->getValue();
+                                             return array($this->aORenderlets["errorMessage"]->majixReplaceData("<b><span style='color: red;'> </span></b>"),);
+                                        }  else {
+                                             return array($this->aORenderlets["errorMessage"]->majixReplaceData("<b><span style='color: red;'> Enddatum nicht in Ordnung</span></b>"),);
+                                        }     
+                                   ]]></php>
+                              </userobj>
+                         </onchange>
+                    </renderlet:DATE>
+                    
+                    <renderlet:BUTTON name="exportexcel1">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.export1.label</label>
+                         <onclick runat="server" exec="cb.doExport()" params="1" when="before-render"/>
+                    </renderlet:BUTTON>
+                    
+                    <renderlet:BUTTON name="exportexcel2">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.export2.label</label>
+                         <onclick runat="server" exec="cb.doExport()" params="2" when="before-render"/>
+                    </renderlet:BUTTON>
+                    
+                    <renderlet:BUTTON name="print">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.pdf.label</label>
+                         <onclick runat="server" exec="cb.doPrint()" when="before-render"/>
+                    </renderlet:BUTTON>
+                    
+                    <renderlet:BUTTON name="btnClear">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.resetform.label</label>
+                         <onclick runat="ajax" cache="false">
+                              <userobj>
+                                   <php><![CDATA[
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        
+                                        $this->oSandBox->sPatient = " ";
+                                        $this->oSandBox->sAssociation = " ";
+                                        $this->oSandBox->sBerater = " ";
+                                        $this->oSandBox->sDatefrom = " ";
+                                        $this->oSandBox->sDateto = " ";
+                                        $this->oSandBox->sUID = " ";
+                                        $this->oSandBox->sYear = date("Y");
+                                        
+                                        $berater = $this->oSandBox->sBerater;
+                                        $association = $this->oSandBox->sAssociation;
+                                        $year = $this->oSandBox->sYear;
+                                        $patient = $this->oSandBox->sPatient;
+                                        
+                                        $aData = getPatientDataUID($year, $berater, $association, $patient);
+                                        $bData = getPatientDataBerater($year, $berater, $association, $patient);
+                                        $cData = getPatientDataPatient($year, $berater, $association, $patient);
+                                        
+                                        return array(
+                                           $this->rdt("uid")->majixReplaceData($aData), 
+                                           $this->rdt("berater")->majixReplaceData($bData), 
+                                           $this->rdt("patient")->majixReplaceData($cData),
+                                           $this->rdt("berater")->majixClearValue(),
+                                           $this->rdt("patient")->majixClearValue(),
+                                           $this->rdt("dateto")->majixClearValue(),
+                                           $this->rdt("datefrom")->majixClearValue(),
+                                           $this->rdt("association")->majixClearValue(),
+                                           $this->rdt("uid")->majixClearValue(),
+                                           $this->rdt("year")->majixSetValue($year),
+                                           $this->rdt("patient")->majixSetValue(""),
+                                           $this->rdt("boxMessage")->majixSetValue(""),
+                                        );
+                                        
+                                   ]]></php>
+                              </userobj>
+                         </onclick>
+                    </renderlet:BUTTON>
+                    
+
+                    <renderlet:BUTTON name="btnSearch">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.search.label</label>
+                         <onclick runat="ajax" cache="false">
+                              <userobj>
+                                   <php><![CDATA[
+                                        return array(
+                                        $this->aORenderlets["pages"]->majixRepaint(),
+                                        //$this->majixSendToPage('/sdgziel/index.php?id=77&L=1&searchform%5D%5Bpage%5D=2'),
+                                        ); 
+                                   ]]></php>
+                              </userobj>
+                         </onclick>
+                    </renderlet:BUTTON>
+                    
+               </childs>
+          </renderlet:SEARCHFORM>
+          
+          <renderlet:LISTER name="pages" ajaxLister="true">
+               <ifEmpty>Empty</ifEmpty>
+               <searchform use="mysearch"/>
+               <pager>
+                    <rows perpage="10"/>
+                    <sort column="patient, beratungsdatum" direction="ASC"/>
+               </pager>
+               <columns>
+                    <column type="renderlet:LINK" name="uid" listHeader="id">
+                         <url>
+                              <userobj>
+                                   <php><![CDATA[
+                                        return "index.php?id=76&uid=".$this->getListData('uid')."&L=".$GLOBALS['TSFE']->sys_language_uid;
+                                   ]]></php>
+                              </userobj>
+                         </url>
+                    </column>
+                    <column type="renderlet:TEXT" name="association" listHeader="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.association.label"/>
+                    <column type="renderlet:TEXT" name="berater" listHeader="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.name.label"/>
+                    <column type="renderlet:LISTBOX" name="zielerreichung" listHeader="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.label">
+                         <data>
+                              <items>
+                                   <item>
+                                        <value>-1</value>
+                                        <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items0</caption>
+                                   </item>
+                                   <item>
+                                        <value>1</value>
+                                        <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items1</caption>
+                                   </item>
+                                   <item>
+                                        <value>2</value>
+                                        <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items2</caption>
+                                   </item>
+                                   <item>
+                                        <value>3</value>
+                                        <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items3</caption>
+                                   </item>
+                                   <item>
+                                        <value>4</value>
+                                        <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items4</caption>
+                                   </item>
+                                   <item>
+                                        <value>5</value>
+                                        <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items5</caption>
+                                   </item>
+                              </items>
+                         </data>
+                    </column>
+                    
+                    <column type="renderlet:TEXTAREA" defaultWrap="false" name="Text" listHeader="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.text.label"/>
+                    
+                    
+                    <column type="renderlet:TEXT" name="year" listHeader="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.year.label"/>
+                    
+                    <column type="renderlet:TEXT" name="patient" listHeader="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.patient.label"/>
+                    
+                    <column type="renderlet:DATE" name="beratungsdatum" listHeader="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.dateberatung.label">
+                         <data>
+                              <datetime format="%d-%m-%Y"/>
+                         </data>
+                    </column>
+                    
+                    <column type="renderlet:BUTTON" name="btn-del" listHeader="" class="delete">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.delete.label</label>
+                         <onclick runat="ajax" params="rowData::uid" cache="false" exec="cb1.btnDelete_click()"/>
+                    </column>
+                    
+               </columns>
+               
+          </renderlet:LISTER>
+          <renderlet:BOX name="remark" class="labels">
+               <html>
+                    <userobj>
+                         <php><![CDATA[
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        return currentRemark($GLOBALS['TSFE']->sys_language_uid);
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+     </elements>
+</formidable>

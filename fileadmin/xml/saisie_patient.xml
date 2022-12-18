@@ -1,0 +1,828 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<formidable version="2.0.301" xmlns:datahandler="http://www.ameos.com/formidable/2.0.301/datahandler" xmlns:datasource="http://www.ameos.com/formidable/2.0.301/datasource" xmlns:renderer="http://www.ameos.com/formidable/2.0.301/renderer" xmlns:renderlet="http://www.ameos.com/formidable/2.0.301/renderlet" xmlns:validator="http://www.ameos.com/formidable/2.0.301/validator" xmlns:actionlet="http://www.ameos.com/formidable/2.0.301/actionlet">
+     //
+     // in class.mainrenderlet.php I had to change the function getValueForHtml while htmlspecialchars is causing a problem with double quotes when using utf-8 (4.4.2019)
+     // in class .tx_mkforms_widgets_listr_Main.php I had to introduce in  funcrion _renderList_displayRows code to replace double quote to two single quotes, while lister displays &quot;
+     // in class .tx_mkforms_action_FormBase.php modified routine getPrefillUid() in order to use also get parameters
+     //
+     
+	<meta>
+		<name>Create user</name>
+		<form formid="myformid"/>
+		<displaylabels>true</displaylabels>
+		<debug>false</debug>
+		<libs>scriptaculous</libs>
+		<codebehind name="cb1" path="fileadmin/xml/cb/class.userfunctions.php"/>
+          
+          <!-- ******************  before rendering take care of temporary table ************************** -->
+          <onCheckPoint when="before-render" >
+			<userobj>
+				<php><![CDATA[
+                         
+                         require_once ("fileadmin/php/myfunctions.php");
+                         
+                         $params1 = \TYPO3\CMS\Core\Utility\GeneralUtility::_GET();
+                         $params2 = \TYPO3\CMS\Core\Utility\GeneralUtility::_POST();
+                         
+                         //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($params1, " get $params");
+                         //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($params2, " post $params");
+                         
+                         //$aFormData = $this->oDataHandler->getFormData();
+                         //echo var_dump($aFormData[berater], "data");
+                         
+                         $patientArray = Array();
+                         $updatedArray = Array();
+                         $GLOBALS["TSFE"]->fe_user->setKey("ses", "patientArray", $patientArray);
+                         $GLOBALS["TSFE"]->fe_user->setKey("ses", "updatedArray", $updatedArray);
+                         $GLOBALS["TSFE"]->fe_user->setKey("ses", "patientSelected", " ");
+                         $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                         
+                         $uid = $params1["uid"];
+                         $frommenu =  $params1["frommenu"];
+                         
+                         $manipulation = $GLOBALS["TSFE"]->fe_user->getKey("ses", "manipulatetable");
+                         //echo "oncheck before-render uid=".$uid . "  manipulation=" . $manipulation . " frommenu=" . $frommenu . "parms2=" . $params2;
+                         
+                         // called from Daten eingeben first time, initialize all data, when reposted do nothing
+                         if(!empty($params2)) {
+                         
+                              //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($uid, "before render, post not empty, do nothing for uid=");
+                         
+                         } else if($frommenu === "1" || is_null($uid))  {
+                         
+                              //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($uid, "before render, frommenu is 1, clear themes table for uid=");
+                              $theme = -1;
+                              $subtheme = -1;
+                         
+                              $GLOBALS["TSFE"]->fe_user->setKey("ses", "theme", $theme);
+                              $GLOBALS["TSFE"]->fe_user->setKey("ses", "subtheme", $subtheme);
+                              $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                              //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($theme, "$theme");
+                         
+                              //echo "clear themes table";
+                              truncateTemporaryThemesTable();
+                         
+                         // called from Daten bearbeiten
+                         } else if(!is_null($uid)) {
+                         
+                              //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($uid, "before render, edition mode for uid=");
+                         
+                              // when temporary table has been maniplulated, do not manipulate the data here
+                              if($manipulation === "1") {
+                                  // echo "table manipulated, do not initialize themes table";
+                              } else {
+                                   //echo "get temporary themes table from userthemes";
+                                   truncateTemporaryThemesTable();
+                                   getThemesFromTable($uid) ; 
+                              }
+                         }
+                         
+                         $GLOBALS["TSFE"]->fe_user->setKey("ses", "manipulatetable", "0");
+                         $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                         
+                    ]]></php>
+               </userobj>
+          </onCheckPoint> 
+          
+     </meta>
+     
+	<control>
+          
+		<datasources>
+			<datasource:DB name="mytemporarytable">
+				<sql><![CDATA[
+					SELECT * from mytable_temporarythemes
+                    ]]></sql>
+               </datasource:DB>
+          </datasources> 
+          
+          <!-- ******************  data table ************************** -->
+		<datahandler:DB>
+			<tablename>mytable</tablename>
+			<keyname>uid</keyname>
+			<process>
+                    
+				<!-- ******************  executed before creation of record, modify some non edited fields ************************** -->
+				<beforeCreation>
+					<userobj>
+						<php><![CDATA[
+                                   $aData = $this->getParams();
+                                   $aData["userid"] = $GLOBALS["TSFE"]->fe_user->user['uid'];
+                                   $aData["association"] = $GLOBALS["TSFE"]->fe_user->user["username"];
+                                   $aData["modification_date"] = time();
+                                   $aData["creation_date"] = $GLOBALS["TSFE"]->fe_user->getKey("ses","creation_date");
+                                   if($aData["beratungsdatum"] < strtotime("1 January 2001")) $aData["beratungsdatum"] = time();
+                                   return $aData;
+                              ]]></php>
+                         </userobj>
+                    </beforeCreation>
+                    
+				<!-- ******************  executed after creation of record , send created message************************** -->
+				<afterCreation>
+					<userobj>
+						<php><![CDATA[                                
+                                   $html = languageMessage("create", true);
+                                   $this->oSandBox->message = $html;
+                                   // clear Thema in order to have to choose again
+                                   $this->rdt("theme")->setValue("");
+                                   return $this->getParams();
+                              ]]></php>
+                         </userobj>
+                    </afterCreation>
+                    
+				<!-- ******************  executed before edition of record, modify some non edited fields ************************** -->
+				<beforeEdition>
+					<userobj>
+						<php><![CDATA[
+                                   $aData = $this->getParams();
+                                   $aData["modification_date"] = time();
+                                   $aData["creation_date"] = $GLOBALS["TSFE"]->fe_user->getKey("ses","creation_date");
+                                   return $aData;
+                              ]]>
+                              </php>
+                         </userobj>
+                    </beforeEdition>
+                    
+				<!-- ******************  executed after edition of record, send modified message ************************** -->
+				<afterEdition>
+					<userobj>
+						<php><![CDATA[
+                                   $html = languageMessage("modify", true);;
+                                   $this->oSandBox->message = $html;
+                                   $this->rdt("theme")->setValue("");
+                                   return $this->getParams();
+                              ]]>
+                              </php>
+                         </userobj>
+                    </afterEdition>
+                    
+				<!-- ******************  executed after edition of record, update user themes table ************************** -->
+				<afterInsertion>
+					<userobj>
+						<php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $aData = $this->getParams();
+                                   $uid = $aData["uid"] ;
+                                   //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($aData, "params afterinsertion, update themes table");  
+                                   //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($uid, "uid afterinsertion, update themes table"); 
+                                   updateThemesTable($uid);
+                                   return $this->getParams();
+                              ]]>
+                              </php>
+                         </userobj>
+                    </afterInsertion>
+                    
+               </process>
+          </datahandler:DB>
+          
+		<!-- ******************  definition of template and display first the username ************************** -->
+		<renderer>
+			<type>TEMPLATE</type>
+			<template>
+				<subpart>###FORM###</subpart>
+				<path>fileadmin/xml/template/form.html</path>
+				<errortag>errors</errortag>
+               </template>
+          </renderer>
+          
+		<!-- ******************  the sandbox for keeping data ************************** -->
+		<sandbox>
+			<userobj>
+				<php><![CDATA[
+                         var $message = "";
+                         function init() {
+                         require_once ("fileadmin/php/myfunctions.php");
+                         $params = \TYPO3\CMS\Core\Utility\GeneralUtility::_GET();
+                         $postId = $params['fiche'];
+                         $currentEntryId = $this->oForm->oDataHandler->currentEntryId();
+                         $fiche = ($currentEntryId) ? $currentEntryId : $postId;
+                         if (isset($fiche) && $fiche != "" && !$currentEntryId) {
+                              $this->oForm->forceEntryId($fiche);
+                         }
+                         //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($params, "sandbox");
+                         }
+                         
+                    ]]></php>
+               </userobj>
+          </sandbox>
+     </control>
+     
+	<!-- ******************  display elements ************************** -->
+	<elements>
+          
+		<!-- ****************** ************************** -->
+		<renderlet:BOX name="loggeduser">
+			<html>
+				<userobj>
+					<php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              return currentUser($GLOBALS['TSFE']->sys_language_uid);
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+          
+          <renderlet:LINK name="help" target="_blank" class="myhelp">
+                    <url>
+                         <userobj>
+                              <php> <![CDATA[ 
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        return currentHelpPDF($GLOBALS['TSFE']->sys_language_uid, "saisie_patient");
+                              ]]></php>
+                         </userobj>
+                    </url>
+               <label>
+                    <userobj>
+                         <php> <![CDATA[ 
+                              require_once ("fileadmin/php/myfunctions.php");
+                              return currentHelp($GLOBALS['TSFE']->sys_language_uid);
+                         ]]></php>
+                    </userobj>
+               </label>
+          </renderlet:LINK>
+          
+		<!-- ****************** message indicating that fields with * are mandatory ************************** -->
+		<renderlet:BOX name="message">
+			<html>
+				<userobj>
+					<php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              $html = languageMessage("error", false);
+                              return  $html;
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+          
+		<!-- ****************** messages ************************** -->
+		<renderlet:BOX name="confirm">
+			<html>
+				<userobj>
+					<php> <![CDATA[ 
+                              //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($this->oSandBox->message, "confirm");
+                              $html = "";
+                              if ($this->oSandBox->message != "") {
+                                   //$html = '<script type="text/javascript"> alert(\'' . $this->oSandBox->message . " ');</script>";
+                                   $html = $this->oSandBox->message; 
+                                   //$html  = $html . '<script type="text/javascript">setTimeout(killMessage,5*1000); </script>';
+                                   $this->oSandBox->message = "";
+                              }
+                              return $html;
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+          
+		<!-- ******************  Year ************************** -->
+		<renderlet:LISTBOX name="year" class="tb0">
+			<label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.year.label</label>
+			<data>
+                    <defaultvalue>
+					<userobj>
+						<php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $uid = getUID(\TYPO3\CMS\Core\Utility\GeneralUtility::_GET(), $this);
+                                   $data = getPatientData($uid);
+                                   if(is_null($data)) {
+                                        return date("Y");
+                                   } else {
+                                        return $data["year"];
+                                   }
+                                   date("Y");
+                              ]]></php>
+                         </userobj>
+                    </defaultvalue>
+                    
+				<items>
+					<item caption="" value=""/>
+					<item caption="2013" value="2013"/>
+					<item caption="2014" value="2014"/>
+					<item caption="2015" value="2015"/>
+					<item caption="2016" value="2016"/>
+					<item caption="2017" value="2017"/>
+					<item caption="2018" value="2018"/>
+					<item caption="2019" value="2019"/>
+					<item caption="2020" value="2020"/>
+					<item caption="2021" value="2021"/>
+					<item caption="2022" value="2022"/>
+					<item caption="2023" value="2023"/>
+					<item caption="2024" value="2024"/>
+					<item caption="2025" value="2025"/>
+                    </items>
+               </data>
+			<validators>
+				<validator:STANDARD>
+					<required>
+						<message>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.year.errors.required</message>
+                         </required>
+                    </validator:STANDARD>
+               </validators>
+          </renderlet:LISTBOX>
+          
+		<!-- ******************  Berater ************************** -->
+		<renderlet:LISTBOX name="berater" class="tb6" activeListable="true">
+			<label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.name.label</label>
+			<data>
+				<userobj>
+					<php><![CDATA[
+                              $superuser="Superuser";
+                              if(in_array($superuser, $GLOBALS['TSFE']->fe_user->groupData['title'])){
+                                   $where = "";  
+                              } else {    
+                                   $where = "association='" . $GLOBALS["TSFE"]->fe_user->user["username"] ."'";                           
+                              }	
+                              $temp= $GLOBALS["TYPO3_DB"]->exec_SELECTgetRows("berater as value, berater as caption", "mytable_berater", $where, "",  "berater ASC");
+                              $extras[0] = array("value" => " ", "caption" => " ");                          // a blank field
+                              return  array_merge($extras, $temp);
+                         ]]></php>
+                    </userobj>
+               </data>
+			<validators>
+				<validator:STANDARD>
+					<required>
+						<message>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.name.errors.required</message>
+                         </required>
+                    </validator:STANDARD>
+               </validators>
+          </renderlet:LISTBOX>
+          
+          <renderlet:LISTBOX name="patient" class="tb6" activeListable="true">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.patient.label</label>   
+                         <data>
+                              <userobj>
+                                   <php><![CDATA[
+                                        $superuser="Superuser";
+                                        if(in_array($superuser, $GLOBALS['TSFE']->fe_user->groupData['title'])){
+                                             $where = "";  
+                                        } else {    
+                                             $where = "association='" . $GLOBALS["TSFE"]->fe_user->user["username"] ."'";                           
+                                        }   
+                                        //$temp= $GLOBALS["TYPO3_DB"]->exec_SELECTgetRows("TRIM(patient) as value , TRIM(patient) as caption", "mytable", $where, "BINARY patient COLLATE utf8_bin",  "patient ASC"); 
+                                        $temp= $GLOBALS["TYPO3_DB"]->exec_SELECTgetRows("patient as value , patient as caption", "mytable", $where, "BINARY patient COLLATE utf8_bin",  "patient ASC"); 
+
+                                        $extras[0] = array("value" => " ", "caption" => " ");                          // a blank field
+                                        $patientArray =  array_merge($extras, $temp);
+
+                                        $GLOBALS["TSFE"]->fe_user->setKey("ses", "patientArray", $patientArray);
+                                        $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                                                                
+                                        return  $patientArray;
+                                   ]]></php>
+                              </userobj>
+                         </data>
+                    <validator:STANDARD>
+                         <required message="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.patient.errors.required"/>
+                    </validator:STANDARD>
+          </renderlet:LISTBOX>
+
+          <renderlet:TEXT name="newpatient" class="tb2" renderOnly="true">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.newpatient.label</label>
+          </renderlet:TEXT>     
+
+		<renderlet:BUTTON name="addpatient">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.addpatient.label</label>
+			<onclick runat="ajax" params="newpatient">
+				<userobj>
+					<php><![CDATA[
+						require_once ("fileadmin/php/myfunctions.php");
+						$patient = $this->oMajixEvent->getParam("newpatient");
+                              $existPatient = true;
+                              $emptyPatient = true;
+
+                              if (!is_null($patient) && strlen($patient) > 0) {
+                                   $emptyPatient = false;
+                                   $patientArray = $GLOBALS["TSFE"]->fe_user->getKey("ses", "patientArray");
+                                   $patientCount= $GLOBALS["TSFE"]->fe_user->getKey("ses", "patientCount");
+                                  
+                                   $key = array_search($patient, array_column($patientArray, 'caption'));
+
+                                   $highestPerc = 0;
+                                   $similarPatient = "";
+                                   for ($i=0; $i<count($patientArray); $i++) {
+                                       $sim = similar_text(strtolower($patient), strtolower($patientArray[$i]['caption']), $perc);
+                                       if($perc > $highestPerc) {
+                                          $highestPerc = $perc;
+                                          $similarPatient = $patientArray[$i]['caption'];
+                                        }
+                                   }
+
+                                   if(!$key) {
+                                        $existPatient = false;
+                                        // insert into list
+                                        $extras[0] = array("value" => $patient, "caption" => $patient); 
+                                        $updatedArray = array_merge($extras, $patientArray);
+
+                                        $GLOBALS["TSFE"]->fe_user->setKey("ses", "updatedArray", $updatedArray);
+                                        $GLOBALS["TSFE"]->fe_user->setKey("ses", "patientSelected", $patient);
+                                        $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                                   }
+                              }                              
+
+                              $error = false;
+						if(!$emptyPatient && !$existPatient) {
+                                   if($highestPerc > 90) {
+                                        $sHtml = languageModalMessages("warning", $patient, $similarPatient);
+                                   } else {
+                                        $sHtml = languageModalMessages("ok", $patient, "");
+                                   }
+						} else if($emptyPatient) {
+                                   $error = true;
+                                   $sHtml = languageModalMessages("empty", $patient, "");
+						} else if($existPatient) {
+                                   $error = true;
+                                   $sHtml = languageModalMessages("error", $patient, "");
+                              }                            
+                              $this->aORenderlets["mymodal"]->aChilds["modal-content"]->setHtml($sHtml);
+                              
+                              if($error) {
+                                   return array(
+                                        $this->aORenderlets["mymodal"]->majixShowBox(),
+                                        $this->aORenderlets["mymodal"]->aChilds["modal-closeBox"]->majixHidden(),
+                                   );
+                              } else {
+                                   return array(
+                                        $this->aORenderlets["mymodal"]->majixShowBox(),
+                                        $this->aORenderlets["mymodal"]->aChilds["modal-closeBox"]->majixVisible(),
+                                   );
+                              }
+                                 
+					]]></php>
+				</userobj>
+			</onclick>
+		</renderlet:BUTTON>
+              
+		<renderlet:MODALBOX name="mymodal">
+			<childs>
+               
+                    <renderlet:TEXT name="modal-title" readOnly="true">
+                         <label>
+                              <userobj>
+                                   <php> <![CDATA[ 
+                                        $html = languageModalMessages("title", "", "");
+                                        return $html;
+                                   ]]></php>
+                              </userobj>
+                         </label>
+                    </renderlet:TEXT>
+
+                    <renderlet:BOX name="modal-content" />
+                    
+                    <renderlet:BUTTON name="modal-cancelBox">
+                       <label>
+                              <userobj>
+                                   <php> <![CDATA[ 
+                                        $html = languageModalMessages("cancel", "", "");
+                                        return $html;
+                                   ]]></php>
+                              </userobj>
+                         </label>
+					<onclick runat="client" exec="cb1.btnCancel_click()">
+                         </onclick>
+                    </renderlet:BUTTON>
+                    
+				<renderlet:BUTTON name="modal-closeBox">
+                       <label>
+                              <userobj>
+                                   <php> <![CDATA[ 
+                                        $html = languageModalMessages("close", "", "");
+                                        return $html;
+                                   ]]></php>
+                              </userobj>
+                         </label>
+                         <onclick runat="client" exec="cb1.btnSave_click()">
+					</onclick>
+				</renderlet:BUTTON>
+                    
+			</childs>
+		</renderlet:MODALBOX>
+				
+		<!-- ******************************************** -->
+		<renderlet:DATE defaultWrap="false" name="beratungsdatum" activeListable="true" >
+			<label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.dateberatung.label</label>
+               <custom>style="width: 120px;" class="tb1"</custom>
+               
+               <data>
+                    <datetime format="%d-%m-%Y" locale="fr_FR"  allowmanualedition="true" displaytime="false" convertToTimestamp="true" />
+				<defaultvalue>
+                         <userobj>
+                              <php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $uid = getUID(\TYPO3\CMS\Core\Utility\GeneralUtility::_GET(), $this);
+                                   $data = getPatientData($uid);
+                                   if(is_null($data)) {
+                                        return time();
+                                   } else {
+                                        return $data["beratungsdatum"];
+                                   }
+                              ]]></php>
+                         </userobj>
+                    </defaultvalue>
+               </data>
+               <validator:STANDARD>
+                    <custom exec="cb1.ValidateDate()" />
+                    <required message="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.dateberatung.errors.required"/>
+               </validator:STANDARD>
+          </renderlet:DATE>
+          
+          <!-- ******************************************** -->
+          <renderlet:LISTBOX name="theme" renderonly = "true" class="tb4">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.themes.label</label>
+               <onchange runat="ajax" syncValue="true" cache="false">
+				<userobj>
+                         <php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              // get actual choosen items
+                              $theme = $this->rdt("theme")->getValue();
+                              $GLOBALS["TSFE"]->fe_user->setKey("ses", "theme", $theme);
+                              $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                              
+                              $subtheme = -1; 
+                              $GLOBALS["TSFE"]->fe_user->setKey("ses", "subtheme", $subtheme);
+                              $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                              
+                              return $this->rdt("theme")->majixRepaintDependancies();
+                         ]]></php>
+                    </userobj>
+               </onchange>
+               <data>
+				<userobj>
+                         <php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              $GLOBALS["TSFE"]->fe_user->setKey("ses", "theme", -1);
+                              $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                              $output = composeThemes();
+                              return $output;
+                         ]]></php>
+                    </userobj>
+               </data>
+          </renderlet:LISTBOX>
+          
+          <!-- ******************************************** -->
+          <renderlet:LISTBOX name="subtheme" class="tb5" renderonly = "true" dependsOn="theme">
+               <label></label>
+               <onchange runat="ajax" syncValue="true" cache="false">
+				<userobj>
+                         <php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              // get actual choosen items
+                              $subtheme = $this->rdt("subtheme")->getValue();
+                              $GLOBALS["TSFE"]->fe_user->setKey("ses", "subtheme", $subtheme);
+                              $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                         ]]></php>
+                    </userobj>
+               </onchange>
+               <data>
+				<userobj>
+                         <php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              $theme = $GLOBALS["TSFE"]->fe_user->getKey("ses","theme");
+                              $output = composeSubThemes($theme);
+                              return $output;
+                         ]]></php>
+                    </userobj>
+               </data>
+          </renderlet:LISTBOX>
+          
+          <!-- ****************** ************************** -->
+          <renderlet:BUTTON name="AddTheme">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.addtheme.label</label>
+               <onClick runat="ajax" cache="false">
+				<userobj>
+                         <php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              // append to array and return output
+                              $theme = $GLOBALS["TSFE"]->fe_user->getKey("ses","theme");
+                              $subtheme = $GLOBALS["TSFE"]->fe_user->getKey("ses","subtheme");
+                              $output = appendThemesX($theme, $subtheme);
+                              
+                              $GLOBALS["TSFE"]->fe_user->setKey("ses", "manipulatetable", "1");
+                              $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                              
+                              return $this->rdt("AddTheme")->majixRepaintDependancies();
+                         ]]></php>
+                    </userobj>
+               </onClick>
+          </renderlet:BUTTON>
+          
+          <!-- ****************** ************************** -->
+          <renderlet:BOX name="titrethemes">
+               <html>
+				<userobj>
+                         <php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              $lang = languageSelected($GLOBALS['TSFE']->sys_language_uid);
+                              switch ($lang) {
+                                   case _en:
+                                        $html = "Themes: " ;
+                                        break;
+                                   case _de:
+                                        $html = "Themen: " ;
+                                        break;
+                                   case _fr:
+                                        $html = "Thèmes: " ;
+                                        break;
+                                   case _it:
+                                        $html = "Thema: " ;
+                                        break;
+                              }
+                              return  $html;
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+          
+          
+          <!-- ****************** ************************** -->
+          <renderlet:LISTER name="pages" ajaxLister="true" dependsOn="AddTheme" class="noheader">
+               <validator:STANDARD>
+                    <custom exec="cb1.ValidateThemesNumber()" />
+               </validator:STANDARD>
+               <ifEmpty>Empty</ifEmpty>
+               <pager>
+				<rows perpage="7"/>
+                    <sort column="theme, subtheme" direction="ASC"/>
+               </pager>
+               <datasource use="mytemporarytable" />
+               <columns>
+				<column type="renderlet:TEXT" name="theme" listheader=""/>
+				<column type="renderlet:TEXT" name="subtheme" listheader=""/>
+				<column type="renderlet:BUTTON" name="btn-del"  class="delete" listheader="">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.delete.label</label>
+                         <onclick runat="ajax" params="rowData::uid" cache="false" exec="cb1.btnDeleteTemporaryTheme_click()"/>
+                    </column>
+               </columns>
+          </renderlet:LISTER>
+          
+          <!-- ******************  id ************************** -->
+          <renderlet:TEXT name="uid" defaultWrap="false" readOnly="true" activeListable="true" class="tb2">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.uid.label</label>
+          </renderlet:TEXT>
+          
+          <!-- ******************  dates ************************** -->
+          <renderlet:DATE name="creation_date" readOnly="true">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.creationdate.label</label>
+               <data>
+				<defaultvalue>
+                         <userobj>
+                              <php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $uid = getUID(\TYPO3\CMS\Core\Utility\GeneralUtility::_GET(), $this);
+                                   $data = getPatientData($uid);
+                                   if(is_null($data)) {
+                                        $GLOBALS["TSFE"]->fe_user->setKey("ses", "creation_date", time());
+                                        $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                                        return time();
+                                   } else {
+                                        $GLOBALS["TSFE"]->fe_user->setKey("ses", "creation_date", $data["creation_date"]);
+                                        $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                                        return $data["creation_date"];
+                                   }
+                              ]]></php>
+                         </userobj>
+                    </defaultvalue>
+				<datetime format="%d-%m-%y %H:%M:%S"/>
+               </data>
+          </renderlet:DATE>
+          
+          <!-- ****************** ************************** -->
+          <renderlet:DATE name="modification_date" readOnly="true">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.modificationdate.label</label>
+               <data>
+				<defaultvalue>
+                         <userobj>
+                              <php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $uid = getUID(\TYPO3\CMS\Core\Utility\GeneralUtility::_GET(), $this);
+                                   $data = getPatientData($uid);
+                                   if(is_null($data)) {
+                                        return time();
+                                   } else {
+                                        return $data["modification_date"];
+                                   }
+                              ]]></php>
+                         </userobj>
+                    </defaultvalue>
+                    <datetime format="%d-%m-%y %H:%M:%S"/>
+               </data>
+          </renderlet:DATE>
+          
+          <!-- ******************  zielerreichung ************************** -->
+          <renderlet:RADIOBUTTON name="zielerreichung">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.label</label>
+               <data>
+                    <defaultvalue>
+                         <userobj>
+                              <php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $uid = getUID(\TYPO3\CMS\Core\Utility\GeneralUtility::_GET(), $this);
+                                   $data = getPatientData($uid);
+                                   $zielerreichung = $data["zielerreichung"];
+                                   if(is_null($zielerreichung)) {
+                                        return -1;
+                                   } else {
+                                        return intval($zielerreichung);
+                                   }
+                              ]]></php>
+                         </userobj>
+                    </defaultvalue>
+                    <items>
+                         <item>
+                              <value>-1</value>
+                              <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items0</caption>
+                         </item>
+                         <item>
+                              <value>5</value>
+                              <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items5</caption>
+                         </item>
+                         <item>
+                              <value>4</value>
+                              <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items4</caption>
+                         </item>
+                         <item>
+                              <value>3</value>
+                              <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items3</caption>
+                         </item>
+                         <item>
+                              <value>2</value>
+                              <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items2</caption>
+                         </item>
+                         <item>
+                              <value>1</value>
+                              <caption>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.ziel.data.items1</caption>
+                         </item>
+                    </items>
+               </data>
+               <wrapitem><![CDATA[<span class="nowrap">|</span>]]></wrapitem>
+          </renderlet:RADIOBUTTON>
+          
+          <!-- ******************  text ************************** -->
+          <renderlet:TEXTAREA defaultWrap="false" name="Text" activeListable="true">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.text.label</label>
+               <data>
+                    <datetime format="%d-%m-%y" locale="fr_FR"/>
+               </data>
+               <validator:STANDARD>
+                    <required message="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.text.errors.required"/>
+               </validator:STANDARD>
+          </renderlet:TEXTAREA>
+          
+          <!-- ******************  submit ************************** -->
+          <renderlet:SUBMIT name="button_submit" class="submit">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.fieldsubmit.label</label>
+          </renderlet:SUBMIT>
+          
+          <!-- ******************  new record ************************** -->
+          <renderlet:LINK name="button_newrecord">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.suivant.label</label>
+               <url>
+                    <userobj>
+                         <php><![CDATA[
+                              $GLOBALS["TSFE"]->fe_user->setKey("ses", "manipulatetable", "0");
+                              $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                              return "index.php?id=76&L=".$GLOBALS['TSFE']->sys_language_uid . "&frommenu=1";
+                         ]]></php>
+                    </userobj>
+               </url>
+          </renderlet:LINK>
+          
+          <!-- ******************  aller à la liste ************************** -->
+          <renderlet:LINK name ="annuler">
+               <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.return.label</label>
+               <url>
+                    <userobj>
+                         <php><![CDATA[ 
+                              $GLOBALS["TSFE"]->fe_user->setKey("ses", "manipulatetable", "0");
+                              $GLOBALS["TSFE"]->fe_user->storeSessionData();
+                              return "index.php?id=77&L=".$GLOBALS['TSFE']->sys_language_uid;
+                         ]]></php>
+                    </userobj>
+               </url>
+          </renderlet:LINK>
+          
+          <renderlet:TEXTAREA name="themeslist">
+               <label></label>
+               <custom>style=”background-color: yellow; border: 4px orange dashed;”</custom>
+               <data>
+                    <defaultvalue>
+                         
+                         <userobj>
+                              <php><![CDATA[	
+                                   $temp= $GLOBALS["TYPO3_DB"]->exec_SELECTquery("*", "mytable_theme", "", "","explication_de");
+                                   $output = "";
+                                   if ($GLOBALS['TYPO3_DB']->sql_num_rows($temp)) {
+                                        while ($row = $GLOBALS["TYPO3_DB"]->sql_fetch_assoc($temp)) {
+                                             $output = $output . str_pad($row['explication_de'],30," ")  . " " .  $row['sousexplication_de']  .  "\r\n";
+                                        }
+                                   }
+                                   return  $output;
+                              ]]></php>
+                         </userobj>
+                    </defaultvalue>
+               </data>
+               <wrap><![CDATA[
+                    <div style="margin: 10px; background-color: cornflowerblue">|</div>
+               ]]></wrap>
+          </renderlet:TEXTAREA>
+          
+     </elements>
+</formidable>

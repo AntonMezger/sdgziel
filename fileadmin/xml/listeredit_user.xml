@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<formidable version="2.0.296">
+     //
+     // in class.mainrenderlet.php I had to change the function getValueForHtml while htmlspecialchars is causing a problem with double quotes when using utf-8 (4.4.2019)
+     // in class .tx_mkforms_widgets_listr_Main.php I had to introduce in  funcrion _renderList_displayRows code to replace double quote to two single quotes, while lister displays &quot;
+     //
+	<meta>
+		<name>Editing in a modalbox</name>
+		<form formid="listUser"/>
+		<codeBehind type="php" name="cb1" path="fileadmin/xml/cb/class.userfunctions.php"/>
+          <codebehind name="cb" path="fileadmin/xml/cb/class.exportxls.php"/>
+     </meta>
+	<control>
+     
+     <renderer>
+               <type>TEMPLATE</type>
+          <template path="fileadmin/xml/template/form_listeruser.html" subpart="###myform###"/>
+     </renderer>
+     
+		<!-- ******************  definition of template and display first the username ************************** -->
+		<datasources>
+			<datasource:DB name="mysource">
+				<sql>
+                         SELECT  fe_users.uid as uid,
+                         fe_users.username as username,
+                         fe_users.name as name,
+                         fe_users.first_name as first_name,
+                         fe_users.disable as disable,
+                         fe_groups.title as title,
+                         fe_users.password as password,
+                         fe_users.address as address,
+                         fe_users.email as email,
+                         fe_users.zip as zip,
+                         fe_users.city as city,
+                         fe_users.country as country,
+                         fe_users.company as company,
+                         fe_users.usergroup as usergroup,  
+                         fe_users.lastlogin as lastlogin       
+					FROM
+                         fe_users, fe_groups
+                         WHERE
+                         fe_users.usergroup = fe_groups.uid
+                    </sql>
+               </datasource:DB>
+          </datasources>
+     </control>
+     
+	<elements>
+          
+		<renderlet:BOX name="loggeduser" class="labelu">
+			<html>
+				<userobj>
+					<php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              return currentUser($GLOBALS['TSFE']->sys_language_uid) . "<br/><br/>";
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+          
+          <renderlet:BOX name="boxMessage" mode="H3"/>
+          
+          <renderlet:BUTTON name="exportexcel1">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.export1.label</label>
+                         <onclick runat="server" exec="cb.doExportUser()" params="1" when="before-render"/>
+          </renderlet:BUTTON>
+                    
+          <renderlet:BUTTON name="print">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.pdf.label</label>
+                         <onclick runat="server" exec="cb.doPrintUser()" params="1" when="before-render"/>
+          </renderlet:BUTTON>
+          
+		<renderlet:LISTER name="pages"  ajaxLister="false">
+			<datasource use="mysource"/>
+			<pager>
+				<rows>
+					<perpage>16</perpage>
+                    </rows>
+				<sort column="username" direction="ASC"/>
+               </pager>
+			<columns>
+                    <column type="renderlet:LINK" name="uid" listHeader="id">
+					<url>
+						<userobj>
+							<php><![CDATA[
+                                        return "index.php?id=80&uid=".$this->getListData('uid')."&L=".$GLOBALS['TSFE']->sys_language_uid;
+                                   ]]></php>
+                              </userobj>
+                         </url>
+                    </column>
+				<column type="renderlet:TEXT" name="username" listHeader="Benutzername"/>
+				<column type="renderlet:TEXT" name="name" listHeader="Name"/>
+				<column type="renderlet:TEXT" name="title" listHeader="Gruppe"/>
+                    <column type="renderlet:TEXT" name="email" listHeader="email"/>
+                    <column type="renderlet:TEXT" name="city" listHeader="Stadt"/>
+                    <column type="renderlet:DATE" name="lastlogin" listHeader="Last login">
+                         <data>
+                              <datetime format="%d-%m-%Y"/>
+                         </data>
+                    </column>
+                    <!-- <column type="renderlet:TEXT" name="disable" listHeader="Deaktiviert"/>-->
+				<column type="renderlet:BUTTON" name="löschen" listHeader="" class="delete">
+					<label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.delete.label</label>
+					<onclick 
+                         runat="ajax" 
+                         params="rowData::uid" 
+                         cache="false" 
+                         exec="cb1.btnDeleteUser_click()"
+					/>
+                    </column>
+               </columns>
+          </renderlet:LISTER>
+          
+     </elements>
+</formidable>

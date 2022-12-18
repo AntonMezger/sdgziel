@@ -1,0 +1,135 @@
+<!-- ###FORM### begin-->
+<script type="text/javascript">
+function killMessage() {
+window.alert("sometext");
+}
+</script>
+
+    <table width="80%">
+		<tr>
+			<td valign="top"><span class="labelu">{loggeduser}</span></td>
+			<td valign="top">{help}</td>
+			<td valign="top"><span class="labelt">{message}</span></td>
+    	</tr>
+</table>
+<br/>
+	
+    <table width="100%">
+		<tr>
+			<td>
+				<span class="nowrap"><span class="label">{uid.label}:</span> <span class="inputvalue">{uid.value.readable}</span></span>			</td>
+			<td>
+				<span class="nowrap"><span class="label">{creation_date.label}: {creation_date.value.readable} </span></span>			</td>
+			<td>
+	  			<span class="nowrap"><span class="label">{modification_date.label}: {modification_date.value.readable} </span></span> 		  </td>
+    	</tr>
+	</table>
+	
+	<div>
+	<span class="nowrap"><span class="label">{year.label}* : </span> <span class="inputvalue">{year.input} </span><span class="error"> {year.error}</span></span>
+	<span class="nowrap"><span class="label">{berater.label}* : </span> <span class="inputvalue">{berater.input} </span><span class="error"> {berater.error}</span></span>
+	<span class="nowrap"><span class="label">{beratungsdatum.label}* : </span> <span class="inputvalue">{beratungsdatum.input} </span><span class="error"> {beratungsdatum.error}</span></span>
+	
+	<table class="patienttable" style="display:inline-block; vertical-align:middle">
+	<tr>
+	<td>
+		<span class="label">{patient.label}* :</span>    </td>
+	<td>
+		<span class="inputvalue1">{patient.input}</span>	</td>
+	<td>
+		<span class="error"> {patient.error}</span>	</td>
+	<td>
+    	<span class="label">{newpatient.label}</span>	</td>
+	<td>
+    	<span class="inputvalue">{newpatient.input}</span>	  </td>		
+	<td>
+		{addpatient}	</td>
+	</tr>
+	</table>
+	</div>
+	<br/>
+	
+	<!-- ###mymodal### begin-->
+	<div class="modal-section">
+		<table class="modal-table">
+		<tr>
+		<td colspan="2" align = "center" bgcolor="#CCCCCC">
+			    <span class="modal-title">{modal-title}</span>		</td>
+		</tr>
+			<tr>
+				<td colspan="2"><div align="center">{modal-content}</div></td>
+			</tr>
+			<tr>
+				<td width="50%">{modal-cancelBox} </td>
+				<td width="50%"> {modal-closeBox}</td>
+			</tr>
+	</table>
+	</div>
+	<!-- ###mymodal### end-->	
+
+	<table class="tableyellow">
+	<colgroup>
+        <col class="white" />
+        <col class="yellow" />
+		<col class="yellow" />
+    </colgroup>
+	<tr>
+	<td valign = "top" width="10%"><span class="label">{zielerreichung.label}: </span></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>
+		<span class="radio">{zielerreichung.input}</span>	</td>
+	</tr>
+	</table>
+	
+<br/>
+
+	<table class="tableyellow">
+	<colgroup>
+        <col class="white" />
+        <col class="yellow" />
+    </colgroup>
+	<tr>
+	<td width="10%" align="left" valign = "top"><span class="label">{Text.label} : * </span></td>
+	<td>
+		<span class="inputvalue">{Text.input}</span><span class="error">{Text.error}</span>	</td>
+	</tr>
+	</table>
+
+<br /> 
+
+<table class="themestable">
+<tr>
+<td align="left" valign="top"  class ="noborder">
+<span class="labelt">{titrethemes}</span></td>
+<td  width="90%" valign ="top">
+<!-- ###pages### begin-->
+  <div class="pages">{pages}{pages.error}</div>
+      <!-- ###ROWS### begin-->
+      <!-- ###ROW### begin-->
+      {short} {btn-del} {btn-hide} <br />
+      {long}
+      <!-- ###ROW### end-->
+      <!-- ###ROWS### end-->
+<!-- ###pages### end-->	
+
+<!-- ###mysearch### end--></td>
+</tr>
+</table>
+	  {pages.error}
+<br/>
+
+<span class="labelv">{theme.label} </span><span class="inputvalue">{theme.input}</span> <span class="label">{subtheme.label} </span><span class="inputvalue">{subtheme.input}</span> &nbsp;&nbsp;{AddTheme}
+
+	<br/>
+  <br/>
+	{button_submit} 
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<strong>{button_newrecord}</strong>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<strong>{annuler}</strong>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<span class="blinking">{confirm.html}</span>
+<!-- ###FORM### end-->
+
+	
+

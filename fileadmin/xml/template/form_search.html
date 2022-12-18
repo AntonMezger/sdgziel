@@ -1,0 +1,62 @@
+<!-- ###myform### begin-->
+    <table width="40%">
+		<tr>
+			<td><span class="labelu">{loggeduser}</span></td>
+			<td>{help}</td>
+    	</tr>
+	</table>
+         {boxMessage}
+         {errorMessage}
+
+<!-- ###mysearch### begin-->
+ <table class="searchmaintable"> 
+ <tr> 
+ 	<td valign="top">
+    <span class="label">{filter}</span>	<br/> <span class="buttonnew">{btnSearch}</span></td>
+ 	<td>
+	
+	<div style="margin-left: 20px; margin-top: 0px;">
+	  <table class="searchtable">
+	    <tr>
+		        <td style="padding-left: 10px;"><span class="label">{association.label} </span> </td><td style="padding-left: 4px;"> <span class="inputvalue">{association.input}</span></td>
+				<td style="padding-left: 10px;"><span class="label">{berater.label} : </span> </td><td style="padding-left: 4px;"> <span class="inputvalue">{berater.input}</span></td>
+				<td style="padding-left: 10px;"><span class="label">{patient.label} : </span> </td><td style="padding-left: 4px;"> <span class="inputvalue">{patient.input}</span></td>
+			</tr>
+		<tr>
+		        <td style="padding-left: 10px;"><span class="label">{year.label} : </span> </td><td  style="padding-left: 4px;"> <span class="inputvalue1">{year.input}</span>	</td>
+				<td style="padding-left: 10px;"><span class="label">{datefrom.label} : </span> </td><td  style="padding-left: 4px;"> <span class="inputvalue">{datefrom.input}</span>	</td>
+				<td style="padding-left: 10px;"><span class="label">{dateto.label} : </span> </td><td colspan="3"  style="padding-left: 4px;"> <span class="inputvalue">{dateto.input}</span>	<span class="label">{uid.label} : </span>  <span class="inputvalue">{uid.input}</span></td>
+			</tr>
+    </table>
+	</div>	</td>
+	</tr>
+	</table>
+	
+	<div style="margin-left: 50px; margin-top: 10px;">
+	   <span class="button">{btnClear.input}</span>
+	       	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	   <span class="button">{print.input}</span>
+	       	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	   <span class="button">{exportexcel1.input}</span>
+	       	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	   <span class="button">{exportexcel2.input}</span>
+	   	       	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	</div>
+	  <br/>
+    <!-- ###mysearch### end-->
+	
+  <!-- ###pages### begin-->
+
+  <div class="pages">{pages}</div>
+      
+      <!-- ###ROWS### begin-->
+      <!-- ###ROW### begin-->
+      
+
+      <!-- ###ROW### end-->
+      <!-- ###ROWS### end-->
+      
+      <!-- ###pages### end-->
+	  {remark}	
+<!-- ###myform### end-->
+    

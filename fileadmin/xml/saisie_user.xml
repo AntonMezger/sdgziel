@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<formidable version="2.0.301" xmlns:datahandler="http://www.ameos.com/formidable/2.0.301/datahandler" xmlns:datasource="http://www.ameos.com/formidable/2.0.301/datasource" xmlns:renderer="http://www.ameos.com/formidable/2.0.301/renderer" xmlns:renderlet="http://www.ameos.com/formidable/2.0.301/renderlet" xmlns:validator="http://www.ameos.com/formidable/2.0.301/validator" xmlns:actionlet="http://www.ameos.com/formidable/2.0.301/actionlet">
+     //
+     // in class.mainrenderlet.php I had to change the function getValueForHtml while htmlspecialchars is causing a problem with double quotes when using utf-8 (4.4.2019)
+     // in class .tx_mkforms_widgets_listr_Main.php I had to introduce in  funcrion _renderList_displayRows code to replace double quote to two single quotes, while lister displays &quot;
+     //
+	<meta>
+		<name>Create user</name>
+		<form formid="myformid"/>
+		<displaylabels>true</displaylabels>
+		<debug>false</debug>
+		<libs>scriptaculous</libs>
+     </meta>
+	<control>
+          
+          <!-- ******************  data table ************************** -->
+		<datahandler:DB>
+			<tablename>fe_users</tablename>
+			<keyname>uid</keyname>
+			<process>
+                    
+				<!-- ******************  executed after creation of record , send created message************************** -->
+                    
+				<beforeInsertion>
+					<userobj>
+						<php><![CDATA[    
+
+                                   require_once ("fileadmin/php/myfunctions.php"); 
+
+                                   $aData = $this->getParams();
+                                   $html ="";
+                                   $aData[pid] = 2;  // add this for correct storage folder
+                                   //cancel insertion of data in case of password mismatch
+                                   if(isset($aData["password"] )  && isset($aData["description"] ) )  {
+                                        if(strcmp($aData["password"], $aData["description"] ) !== 0) {
+                                             $missing =  "passwords do not match";
+                                             $this->aORenderlets["message"]->setHtml($missing);
+                                             $html = languageMessage("checkpassword", true);
+                                             $this->oSandBox->message = $html;
+                                             return array();
+                                        }
+                                   }
+                                   $this->oSandBox->message = $html;
+                                   return $aData;
+
+                              ]]></php>
+                         </userobj>
+                         
+                    </beforeInsertion>
+                    
+				<afterCreation>
+					<userobj>
+						<php><![CDATA[       
+                                   require_once ("fileadmin/php/myfunctions.php");                         
+                                   $html = languageMessage("create", true);
+                                   $this->oSandBox->message = $html;
+                                   return $this->getParams();
+                              ]]></php>
+                         </userobj>
+                    </afterCreation>
+                    
+				<!-- ******************  executed before edition of record, modify some non edited fields ************************** -->
+				<beforeEdition>
+					<userobj>
+						<php><![CDATA[
+                                   $aData = $this->getParams();
+                                   return $aData;
+                              ]]></php>
+                         </userobj>
+                    </beforeEdition>
+                    
+				<!-- ******************  executed after edition of record, send modified message ************************** -->
+				<afterEdition>
+					<userobj>
+						<php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $html = languageMessage("modify", true);
+                                   $this->oSandBox->message = $html;
+                                   return $this->getParams();
+                              ]]></php>
+                         </userobj>
+                    </afterEdition>
+               </process>
+          </datahandler:DB>
+          
+		<!-- ******************  definition of template and display first the username ************************** -->
+		<renderer>
+			<type>TEMPLATE</type>
+			<template>
+				<subpart>###FORM###</subpart>
+				<path>fileadmin/xml/template/form_user.html</path>
+				<errortag>errors</errortag>
+               </template>
+          </renderer>
+		<!-- ******************  the sandbox for keeping data ************************** -->
+		<sandbox>
+			<userobj>
+				<php><![CDATA[
+                         var $message = "";
+                         function init() {
+                         require_once ("fileadmin/php/myfunctions.php");
+                         $params = \TYPO3\CMS\Core\Utility\GeneralUtility::_GET();
+                         $postId = $params['fiche'];
+                         $currentEntryId = $this->oForm->oDataHandler->currentEntryId();
+                         $fiche = ($currentEntryId) ? $currentEntryId : $postId;
+                         if (isset($fiche) && $fiche != "" && !$currentEntryId) {
+                              $this->oForm->forceEntryId($fiche);
+                         }
+                         //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($params, "sandbox");
+                         }
+                    ]]></php>
+               </userobj>
+          </sandbox>
+     </control>
+	<!-- ******************  display elements ************************** -->
+	<elements>
+		<!-- ****************** ************************** -->
+		<renderlet:BOX name="loggeduser">
+			<html>
+				<userobj>
+					<php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              return currentUser($GLOBALS['TSFE']->sys_language_uid);
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+		<renderlet:BOX name="message"> 
+          </renderlet:BOX>
+		<!-- ****************** ************************** -->
+		<renderlet:BOX name="confirm">
+			<html>
+				<userobj>
+					<php> <![CDATA[ 
+                              //echo \TYPO3\CMS\Extbase\Utility\DebuggerUtility::var_dump($this->oSandBox->message, "confirm");
+                              $html = "";
+                              if ($this->oSandBox->message != "") {
+                                   //$html = '<script type="text/javascript"> alert(\'' . $this->oSandBox->message . " ');</script>";
+                                   $html = $this->oSandBox->message; 
+                                   //$html  = $html . '<script type="text/javascript">setTimeout(killMessage,5*1000); </script>';
+                                   $this->oSandBox->message = "";
+                              }
+                              return $html;
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+		<!-- ****************** **************************-->
+		<renderlet:TEXT name="uid" readOnly="true">
+			<label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.uid.label</label>
+			<data>
+				<defaultvalue>
+					<userobj>
+						<php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $uid = getUID(\TYPO3\CMS\Core\Utility\GeneralUtility::_GET(), $this);
+                                   return $uid;
+                              ]]></php>
+                         </userobj>
+                    </defaultvalue>
+               </data>
+          </renderlet:TEXT>
+		<renderlet:TEXT defaultWrap="false" name="username" activeListable="true" class="tb3" label="username *">
+			<validators>
+				<validator:STANDARD>
+					<required>
+						<message>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.username.errors.required</message>
+                         </required>
+                    </validator:STANDARD>
+               </validators>
+          </renderlet:TEXT>
+		<renderlet:TEXT defaultWrap="false" name="password" activeListable="true" class="tb3" label="password *">
+			<validators>
+				<validator:STANDARD>
+					<required>
+						<message>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.password.errors.required</message>
+                         </required>
+                    </validator:STANDARD>
+               </validators>
+          </renderlet:TEXT>
+          <renderlet:TEXT defaultWrap="false" name="description" activeListable="true" class="tb3" label="password (repeat) *">
+			<validators>
+				<validator:STANDARD>
+					<required>
+						<message>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.password.errors.required</message>
+                         </required>
+                    </validator:STANDARD>
+               </validators>
+          </renderlet:TEXT>
+		<renderlet:TEXT defaultWrap="false" name="name" activeListable="true" class="tb3" label="name *">
+			<validators>
+				<validator:STANDARD>
+					<required>
+						<message>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.familyname.errors.required</message>
+                         </required>
+                    </validator:STANDARD>
+               </validators>
+          </renderlet:TEXT>
+		<renderlet:TEXT defaultWrap="false" name="first_name" activeListable="true" class="tb3" label="first_name"></renderlet:TEXT>
+		<renderlet:TEXT defaultWrap="false" name="title" activeListable="true" class="tb3" label="title"></renderlet:TEXT>
+		<renderlet:TEXT defaultWrap="false" name="address" activeListable="true" class="tb3" label="address"></renderlet:TEXT>
+		<renderlet:TEXT defaultWrap="false" name="email" activeListable="true" class="tb3" label="email *">
+			<validators>
+				<validator:STANDARD>
+					<required>
+						<message>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.email.errors.required</message>
+                         </required>
+                    </validator:STANDARD>
+               </validators>
+          </renderlet:TEXT>
+		<renderlet:TEXT defaultWrap="false" name="city" activeListable="true" class="tb3" label="city">
+          </renderlet:TEXT>
+		<renderlet:TEXT defaultWrap="false" name="country" activeListable="true" class="tb3" label="country">
+          </renderlet:TEXT>
+		<renderlet:TEXT defaultWrap="false" name="zip" activeListable="true" class="tb3" label="zip">
+          </renderlet:TEXT>
+		<renderlet:RADIOBUTTON name="usergroup" label="usergroup *">
+			<validators>
+				<validator:STANDARD>
+					<required>
+						<message>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.usergroup.errors.required</message>
+                         </required>
+                    </validator:STANDARD>
+               </validators>
+			<data>
+				<items>
+					<item caption="  Associations" value="1"/>
+					<item caption="  Independants" value="4"/>
+					<item caption="  Others" value="2"/>
+					<item caption="  Superuser" value="3"/>
+                    </items>
+				<defaultvalue>
+					<userobj>
+						<php><![CDATA[
+                                   require_once ("fileadmin/php/myfunctions.php");
+                                   $uid = getUID(\TYPO3\CMS\Core\Utility\GeneralUtility::_GET(), $this);
+                                   $data = getUserData($uid);
+                                   return $data["usergroup"];
+                              ]]></php>
+                         </userobj>
+                    </defaultvalue>
+               </data>
+          </renderlet:RADIOBUTTON>
+		<!-- ******************  submit ************************** -->
+		<renderlet:SUBMIT name="button_submit" class="submit">
+			<label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.fieldsubmit.label</label>
+          </renderlet:SUBMIT>
+		<!-- ******************  new record ************************** -->
+		<renderlet:LINK name="button_newrecord">
+			<label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.suivant.label</label>
+			<url>
+				<userobj>
+					<php><![CDATA[
+                              return "index.php?id=80&L=".$GLOBALS['TSFE']->sys_language_uid;
+                         ]]></php>
+                    </userobj>
+               </url>
+          </renderlet:LINK>
+		<!-- ******************  aller à la liste ************************** -->
+		<renderlet:LINK name ="annuler">
+			<label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.return.label</label>
+			<url>
+				<userobj>
+					<php><![CDATA[ 
+                              return "index.php?id=81&L=".$GLOBALS['TSFE']->sys_language_uid;
+                         ]]></php>
+                    </userobj>
+               </url>
+          </renderlet:LINK>
+     </elements>
+</formidable>

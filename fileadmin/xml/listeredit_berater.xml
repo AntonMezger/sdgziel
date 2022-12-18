@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<formidable version="2.0.296">
+     //
+     // in class.mainrenderlet.php I had to change the function getValueForHtml while htmlspecialchars is causing a problem with double quotes when using utf-8 (4.4.2019)
+     // in class .tx_mkforms_widgets_listr_Main.php I had to introduce in  funcrion _renderList_displayRows code to replace double quote to two single quotes, while lister displays &quot;
+     //
+	<meta>
+		<name>Editing in a modalbox</name>
+		<form formid="listBerater"/>
+          <codeBehind type="php" name="cb1" path="fileadmin/xml/cb/class.userfunctions.php" />
+          <codebehind name="cb" path="fileadmin/xml/cb/class.exportxls.php"/>
+     </meta>
+     
+	<control>
+     
+     <renderer>
+		<type>TEMPLATE</type>
+          <template path="fileadmin/xml/template/form_listerberater.html" subpart="###myform###"/>
+     </renderer>
+          
+          <!-- ******************  definition of template and display first the username ************************** -->
+          <datasources>
+               <datasource:DB name="mysource">
+				<sql>
+					<userobj>
+						<php><![CDATA[
+                                   
+                                   $superuser="Superuser";
+                                   if(in_array($superuser, $GLOBALS['TSFE']->fe_user->groupData['title'])){
+                                        return 'SELECT * FROM mytable_berater';
+                                   } else {                               
+                                        return 'SELECT * FROM mytable_berater 
+                                        WHERE Association = ' ."'" . $GLOBALS["TSFE"]->fe_user->user["username"] ."'";
+                                   }		
+                              ]]></php>
+                         </userobj>
+                    </sql>
+               </datasource:DB>
+          </datasources>
+     </control>
+     
+	<elements>
+          
+		<renderlet:BOX name="loggeduser" class="labelu">
+			<html>
+				<userobj>
+					<php><![CDATA[
+                              require_once ("fileadmin/php/myfunctions.php");
+                              return currentUser($GLOBALS['TSFE']->sys_language_uid);
+                         ]]></php>
+                    </userobj>
+               </html>
+          </renderlet:BOX>
+          
+          <renderlet:LINK name="help" target="_blank" class="myhelp">
+                         <url>
+                              <userobj>
+                                   <php> <![CDATA[ 
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        return currentHelpPDF($GLOBALS['TSFE']->sys_language_uid, "listeredit_berater");
+                                   ]]></php>
+                              </userobj>
+                         </url>
+                         <label>
+                              <userobj>
+                                   <php> <![CDATA[ 
+                                        require_once ("fileadmin/php/myfunctions.php");
+                                        return currentHelp($GLOBALS['TSFE']->sys_language_uid);
+                                   ]]></php>
+                              </userobj>
+                         </label>
+          </renderlet:LINK>
+          
+          <renderlet:BOX name="boxMessage" mode="H3"/>
+          
+          <renderlet:BUTTON name="exportexcel1">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.export1.label</label>
+                         <onclick runat="server" exec="cb.doExportBerater()" params="1" when="before-render"/>
+          </renderlet:BUTTON>
+                    
+          <renderlet:BUTTON name="print">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.pdf.label</label>
+                         <onclick runat="server" exec="cb.doPrintBerater()" params="1" when="before-render"/>
+          </renderlet:BUTTON>
+          
+          <renderlet:LISTER name="pages"  ajaxLister="false">
+               <datasource use="mysource" />
+               <pager>
+                    <rows>
+					<perpage>15</perpage>
+                    </rows>
+                    <sort column="association" direction="ASC"/>
+               </pager>
+               <columns>
+                    <column type="renderlet:LINK" name="uid" listHeader="id" >
+					<url>
+                              <userobj>
+                                   <php><![CDATA[
+                                        return "index.php?id=78&uid=".$this->getListData('uid')."&L=".$GLOBALS['TSFE']->sys_language_uid;
+                                   ]]></php>
+                              </userobj>
+                         </url>
+                    </column>
+                    
+                    <column type="renderlet:TEXT" name="association" listHeader="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.association.label" />
+                    <column type="renderlet:TEXT" name="berater" listHeader="LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.name.label" />
+                    <column type="renderlet:BUTTON" name="btn-del"  listHeader=""  class="delete">
+                         <label>LLL:EXT:mkforms/locallang_sdg.xml:plugin.mkforms.flexform.delete.label</label>
+                         <onclick
+                              runat="ajax"
+                              params="rowData::uid"
+                              cache="false"
+                              exec="cb1.btnDeleteBerater_click()"
+                         />
+                    </column>
+               </columns>
+          </renderlet:LISTER>
+          
+     </elements>
+     
+</formidable>                                        

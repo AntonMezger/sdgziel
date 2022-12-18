@@ -1,0 +1,30 @@
+﻿<!--<link href="../../../default/templates/css/custom-css.css" rel="stylesheet" type="text/css" />-->
+<f:spaceless>
+ <div class="header">
+ <img src="fileadmin/images/bg_headernew.jpg" alt="ASD/SDG"/>
+  <h1>SDG&nbsp;QS&nbsp;Plattform,&nbsp;ASD&nbsp;plateforme</h1>  
+</div> 
+
+<div class="main_content">
+    <a class="sr-only sr-only-focusable" href="#content">
+        <span>{f:translate(key: 'skiptomaincontent', extensionName: 'bootstrap_package')}</span>
+    </a>
+	<f:render partial="Structure/Footer" arguments="{_all}" />
+    <f:render partial="Navigation/Main" arguments="{_all}" />
+    <f:render partial="Navigation/Breadcrumb" arguments="{_all}" />
+	<div style="height:700px;border:1px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto; margin-top: -20px">
+	<div id="content" class="main-section">
+        <!--TYPO3SEARCH_begin-->
+        <f:render section="Main" />
+        <!--TYPO3SEARCH_end-->
+    </div>
+	</div>
+    <f:render partial="Structure/ScrollTop" arguments="{_all}" />
+	            <f:if condition="{settings.copyright.enable}">
+                    <div class="copyright">
+                        <f:format.html>{settings.copyright.text}</f:format.html>
+                    </div>
+                </f:if>
+</div>
+</f:spaceless>
+
