@@ -46,6 +46,8 @@ class tx_mkforms_widgets_lister_Main extends formidable_mainrenderlet
     public $iTempPage = false;
 
     public $aListerData = false;
+	
+	private $TotalNumberOfRows = 0;
 
     private function fetchListerData($bForce = false)
     {
@@ -87,7 +89,12 @@ class tx_mkforms_widgets_lister_Main extends formidable_mainrenderlet
         $this->aRdtByRow = [];
 
         $aData = $this->fetchListerData();
-        if (0 === (int) $aData['numrows']) {
+		
+		// this is a quic and dirty fix for taking into account multiple pages and a single page with few elements
+		$this->TotalNumberOfRows = max ($this->TotalNumberOfRows, (int) $aData['numrows']);
+        //if (0 === (int) $aData['numrows']) {
+		if (0 === (int) $this->TotalNumberOfRows) {
+
             if (false !== ($mEmpty = $this->_navConf('/ifempty'))) {
                 if (is_array($mEmpty)) {
                     if (false === $this->getForm()->_defaultTrue('/process', $mEmpty)) {
@@ -129,7 +136,8 @@ class tx_mkforms_widgets_lister_Main extends formidable_mainrenderlet
                 ];
             }
         } else {
-            $this->_initPager($aData['numrows']);
+            //$this->_initPager($aData['numrows']);
+			$this->_initPager($this->TotalNumberOfRows);
 
             $sAddParams = $this->_getAddInputParams();
 
@@ -258,6 +266,9 @@ class tx_mkforms_widgets_lister_Main extends formidable_mainrenderlet
                 } else {
                     $this->oDataStream = &$this->getForm()->getDataSource($sDsToUse);
                     $this->sDsType = 'datasource';
+					// get totalnumberof rows					
+					$bData = $this->oDataStream->fetchData();
+					$this->TotalNumberOfRows = $bData['numrows'];
                 }
             }
         } else {
