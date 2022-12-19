@@ -2807,15 +2807,17 @@ JAVASCRIPT;
      */
     public function _renderElement(&$oRdt)
     {
+		$current_error_reporting = error_reporting();
+		error_reporting(0);
         if (!$oRdt->i18n_hideBecauseNotTranslated()) {
             $mHtml = $this->oRenderer->processHtmlBag(
                 $oRdt->render(),
                 $oRdt    // changed: avoid call-time pass-by-reference
             );
-
+			error_reporting($current_error_reporting);
             return $mHtml;
         }
-
+		error_reporting($current_error_reporting);
         return false;
     }
 
