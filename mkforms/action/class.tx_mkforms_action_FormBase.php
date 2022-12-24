@@ -374,8 +374,14 @@ class tx_mkforms_action_FormBase extends tx_rnbase_action_BaseIOC
         $uid = $this->getParameters()->get($sParamName);
 
         // Use parameter "uid", if available
-        return $uid ? $uid : false;        // FALSE as default - DON'T use NULL!!!
-    }
+        $uid = $uid ? $uid : false;        // FALSE as default - DON'T use NULL!!!
+        
+        // new code takes care of url link uid parameter for editing (25.9.2019 by acm)
+        if(!$uid) {
+           $getuid = $_GET["uid"];   
+           if(!is_null($getuid)) $uid = $getuid;
+        }
+        return $uid; }
 
     /**
      * Soll der Template name als perfill parameter name herangezogen werden?
