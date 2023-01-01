@@ -186,9 +186,9 @@ class tx_mkforms_js_Loader
             'Misc' => [
                 'Urls' => [
                     'Ajax' => [
-                        'event' => tx_mkforms_util_Div::removeEndingSlash($this->getAbsRefPrefix()).'/?mkformsAjaxId='
+                        'event' => tx_mkforms_util_Div::removeEndingSlash($this->getAbsRefPrefix()).'/index.php?eID='
                             .tx_mkforms_util_Div::getAjaxEId().'&object=tx_ameosformidable&servicekey=ajaxevent',
-                        'service' => tx_mkforms_util_Div::removeEndingSlash($this->getAbsRefPrefix()).'/?mkformsAjaxId='
+                        'service' => tx_mkforms_util_Div::removeEndingSlash($this->getAbsRefPrefix()).'/index.php?eID='
                             .tx_mkforms_util_Div::getAjaxEId().'&object=tx_ameosformidable&servicekey=ajaxservice',
                     ],
                 ],
